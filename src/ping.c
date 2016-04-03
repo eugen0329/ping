@@ -2,16 +2,16 @@
 
 int ping(const char* hostname)
 {
-    socket_t soc;
     size_t size = SOC_RCV_MAX_BUF_SIZE;
     sigset_t sig_mask;
+    socket_t sd;
 
     // Structures for handling INternet addresses
-    sockaddr_in_t from;
-    sockaddr_in_t to;
+    sockaddr_in_t from, sockaddr_in_t to;
     hostent_t* hosts_db_entry;
 
-    if ((soc = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP)) < 0) {
+
+    if ((sd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP)) < 0) {
         perror("ping: socket");
         exit(ERR_CREATE_SOCKET);
     }
@@ -20,7 +20,7 @@ int ping(const char* hostname)
     // To prevent the receive buffer overflow:
     //   SOL_SOCKET: determines the socket-level manipulations
     //   SO_RCVBUF:  maximum socket receive buffer in bytes
-    setsockopt(soc, SOL_SOCKET, SO_RCVBUF, &size, sizeof(size));
+    setsockopt(sd, SOL_SOCKET, SO_RCVBUF, &size, sizeof(size));
 
 
     bzero(&to, sizeof(to));
@@ -30,13 +30,28 @@ int ping(const char* hostname)
     to.sin_addr = *((struct in_addr *) hosts_db_entry->h_addr);
 
     init_signal_handlers();
+    init_interval_timer()
 
-    if(close(soc) < 0) {
+    if(close(sd) < 0) {
         perror("ping: close");
         exit(ERR_CREATE_SOCKET);
     }
 
     return EXIT_SUCCESS;
+}
+
+void init_interval_timer()
+{
+    itimerval_t interval_timer;
+
+    // trigger itimer afer 1 ms..
+    interval_timer.it_value.tv_sec = 0;
+    interval_timer.it_value.tv_usec = 1;
+    // ..every 1 s
+    interval_timer.it_interval.tv_sec = 1;
+    interval_timer.it_interval.tv_usec = 0;
+
+    setitimer(ITIMER_REAL, &interval_timer, DONT_SAVE_OLD_VAL);
 }
 
 void init_signal_handlers()
@@ -59,8 +74,8 @@ void init_signal_handlers()
     handler_action.sa_handler = &catcher;
 
     // Bind signal handler
-    sigaction(SIGALRM, &handler_action, DONT_SAVE_OLD_SIGACTION);
-    sigaction(SIGINT,  &handler_action, DONT_SAVE_OLD_SIGACTION);
+    sigaction(SIGALRM, &handler_action, DONT_SAVE_OLD_VAL);
+    sigaction(SIGINT,  &handler_action, DONT_SAVE_OLD_VAL);
 }
 
 void catcher(int signum)
