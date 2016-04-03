@@ -5,7 +5,5 @@
 
 int main(int argc, char *argv[])
 {
-
-    ping(GOOGLE_DNS);
-    return 0;
+    return ping(GOOGLE_DNS);
 }
