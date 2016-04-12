@@ -35,6 +35,8 @@ typedef struct timeval timeval_t;
 static pid_t pid;
 static socket_t sd;
 
+static int repeat_packets_receiving;
+
 static size_t nreceived;
 static size_t ntransmitted;
 
@@ -53,7 +55,10 @@ int ping(const char* hostname);
 static void init_signal_handlers();
 static void init_interval_timer();
 
-static void catcher(int signum); // SIG HANDLER
+// SIG HANDLER
+static void catcher(int signum);
+
+static void finish();
 static void pinger();
 static void output(char* recv_buf, int msglen, struct timeval* tval);
 
