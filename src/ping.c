@@ -86,22 +86,27 @@ void output(char* recv_buf, int msglen, struct timeval* tval)
         fprintf(stderr, "icmplen (%d) < 8. msglen: %d, iplen: %d", icmplen, msglen, iplen);
 
     if (icmp->icmp_type == ICMP_ECHOREPLY) {
+        if (icmp->icmp_id != pid) return; // reply not for our query
 
-        if (icmp->icmp_id != pid) return; // request not for our query
+        if(icmplen - 8 >= sizeof(struct timeval)) {
+            tvsend = (struct timeval *) icmp->icmp_data;
+            sub_tval(tval, tvsend);
 
-        tvsend = (struct timeval *) icmp->icmp_data;
-        sub_tval(tval, tvsend);
+            // (round-trip time)  время оборота пакета
+            rtt = tval->tv_sec * 1000.0 + tval->tv_usec / 1000.0;
 
-        // (round-trip time)  время оборота пакета
-        rtt = tval->tv_sec * 1000.0 + tval->tv_usec / 1000.0;
+            rtt_sum += rtt;
+            if (rtt < rtt_min) rtt_min = rtt;
+            if (rtt > rtt_max) rtt_max = rtt;
 
-        nreceived++;
-        rtt_sum += rtt;
-        if (rtt < rtt_min) rtt_min = rtt;
-        if (rtt > rtt_max) rtt_max = rtt;
+            printf("%d bytes addr_from %s: icmp_seq=%u, ttl=%d, time=%.2f ms\n", 
+                    icmplen, inet_ntoa(addr_from.sin_addr), icmp->icmp_seq, ip->ip_ttl, rtt);
+        } else {
+            printf("%d bytes from %s: icmp_seq=%u, ttl=%d\n",
+                   icmplen, inet_ntoa(addr_from.sin_addr),
+                   icmp->icmp_seq, ip->ip_ttl);
+        }
 
-        printf("%d bytes addr_from %s: icmp_seq=%u, ttl=%d, time=%.2f ms\n", 
-                icmplen, inet_ntoa(addr_from.sin_addr), icmp->icmp_seq, ip->ip_ttl, rtt);
         ++nreceived;
     }
 }
@@ -181,7 +186,7 @@ void catcher(int signum)
             if (nreceived > ntransmitted)
                 printf("-- somebody's printing up packets!");
             else
-                printf("%d%% packet loss",
+                printf(", %d%% packet loss",
                        (int) (((ntransmitted - nreceived) * 100) / ntransmitted));
         }
         puts("");
