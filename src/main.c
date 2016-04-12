@@ -1,9 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define GOOGLE_DNS "8.8.8.8"
-
 int main(int argc, char *argv[])
 {
-    return ping(GOOGLE_DNS);
+    if(argc != 2) {
+        fprintf(stderr, "USAGE:\n\t%s destination\n", argv[0]);
+        return 0;
+    }
+    return ping(argv[1]);
 }

@@ -14,8 +14,7 @@ int ping(const char* hostname)
     int bytes_received;
     timeval_t tval;
 
-    // PF_INET
-    if ((sd = socket(PF_INET, SOCK_RAW, IPPROTO_ICMP)) < 0) {
+    if ((sd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP)) < 0) {
         perror("ping: socket");
         exit(ERR_CREATE_SOCKET);
     }
@@ -26,15 +25,15 @@ int ping(const char* hostname)
     //   SO_RCVBUF:  maximum socket receive buffer in bytes
     setsockopt(sd, SOL_SOCKET, SO_RCVBUF, &size, sizeof(size));
 
-    bzero(&addr_to, sizeof(addr_to));
-    addr_to.sin_family = AF_INET; // AF_INET: address family for IPv4
-
     // Receive address
     hosts_db_entry = gethostbyname(hostname);
     if (hosts_db_entry == NULL) {
         perror("ping: gethostbyname");
         exit(ERR_HOST_NOT_FOUND);
     }
+
+    bzero(&addr_to, sizeof(addr_to));
+    addr_to.sin_family = AF_INET; // AF_INET: address family for IPv4
     addr_to.sin_addr = *((struct in_addr *) hosts_db_entry->h_addr);
 
     printf("PING %s (%s): %d data bytes\n", hostname,
@@ -46,7 +45,7 @@ int ping(const char* hostname)
     pid = getpid();
 
     addr_from_len = sizeof(addr_from);
-    while(1) {
+    while(true) {
         bytes_received = recvfrom(sd, recv_buf, sizeof(recv_buf), 0,
                             (struct sockaddr *) &addr_from, &addr_from_len);
 
@@ -92,14 +91,14 @@ void output(char* recv_buf, int msglen, struct timeval* tval)
             tvsend = (struct timeval *) icmp->icmp_data;
             sub_tval(tval, tvsend);
 
-            // (round-trip time)  время оборота пакета
+            // round-trip time
             rtt = tval->tv_sec * 1000.0 + tval->tv_usec / 1000.0;
 
             rtt_sum += rtt;
             if (rtt < rtt_min) rtt_min = rtt;
             if (rtt > rtt_max) rtt_max = rtt;
 
-            printf("%d bytes addr_from %s: icmp_seq=%u, ttl=%d, time=%.2f ms\n", 
+            printf("%d bytes addr_from %s: icmp_seq=%u, ttl=%d, time=%.1f ms\n", 
                     icmplen, inet_ntoa(addr_from.sin_addr), icmp->icmp_seq, ip->ip_ttl, rtt);
         } else {
             printf("%d bytes from %s: icmp_seq=%u, ttl=%d\n",
