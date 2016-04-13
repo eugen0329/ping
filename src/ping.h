@@ -60,6 +60,6 @@ static void catcher(int signum);
 
 static void finish();
 static void pinger();
-static void output(char* recv_buf, int msglen, struct timeval* tval);
+static int output(char* recv_buf, int msglen, struct timeval* tval);
 
 #endif /* end of include guard: PING_H_WEJQGZT5 */

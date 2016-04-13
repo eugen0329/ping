@@ -34,18 +34,17 @@ int ping(const char* hostname)
     addr_to.sin_addr = *((struct in_addr *) hosts_db_entry->h_addr);
 
 
+    // ICMP doesn't have PORT field, so we forced to identify packages by pid
+    addr_from_len = sizeof(addr_from);
+    pid = getpid();
+
     init_signal_handlers();
     init_interval_timer();
 
+    printf("PING  %s (%s): %d data bytes\n", hostname,
+            inet_ntoa(addr_to.sin_addr), (int) icmp_data_len);
 
-    printf("PING %s (%s): %d data bytes\n", hostname,
-      inet_ntoa(addr_to.sin_addr), (int) icmp_data_len);
-
-    // ICMP doesn't have PORT field, so we forced to identify packages by id
-    pid = getpid();
-    addr_from_len = sizeof(addr_from);
-
-    repeat_packets_receiving = 1;
+    repeat_packets_receiving = true;
     while(repeat_packets_receiving) {
         bytes_received = recvfrom(sd, recv_buf, sizeof(recv_buf), 0,
                             (struct sockaddr *) &addr_from, &addr_from_len);
@@ -68,7 +67,7 @@ int ping(const char* hostname)
     return EXIT_SUCCESS;
 }
 
-void output(char* recv_buf, int msglen, struct timeval* timeout)
+int output(char* recv_buf, int msglen, struct timeval* timeout)
 {
     int iplen;
     int icmplen;
@@ -88,7 +87,12 @@ void output(char* recv_buf, int msglen, struct timeval* timeout)
 
 
     if (icmp->icmp_type == ICMP_ECHOREPLY) {
-        if (icmp->icmp_id != pid) return; // reply not for our query
+        // If multiple instances are running, kernel sends packets for each
+        // raw soc. We need to ignore packets with another ID than current
+        // pid.
+        if (icmp->icmp_id != pid) {
+            return -1;
+        }
 
         if(icmplen - 8 >= sizeof(struct timeval)) {
             tvsend = (struct timeval *) icmp->icmp_data;
@@ -113,6 +117,7 @@ void output(char* recv_buf, int msglen, struct timeval* timeout)
 
         ++nreceived;
     }
+    return 0;
 }
 
 void init_interval_timer()
@@ -147,7 +152,7 @@ void init_signal_handlers()
     // NOTE: signal that caused the handler addr_to be invoked is automatically added
     // addr_to the process signal mask, so a signal handler won't recursively
     // interrupt itself
-    /* sigaddset(&handler_action.sa_mask, SIGQUIT); */
+    /* sigaddset(&handler_action.sa_mask, SIGUSR1); */
 
     // Bind signal handler
     handler_action.sa_handler = &catcher;
@@ -208,7 +213,6 @@ void finish()
     }
 
     fflush(stdout);
-    repeat_packets_receiving = 0;
-    /* exit(EXIT_SUCCESS); */
+    repeat_packets_receiving = false;
 }
 

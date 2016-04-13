@@ -20,6 +20,7 @@ add_custom_command(
   TARGET ${TARGET}
   POST_BUILD
   COMMAND sudo chown root ${TARGET}
+  # set user or group ID on execution (+s) for all (a)
   COMMAND sudo chmod a+s  ${TARGET}
   COMMENT "Grant root permissions to use RAW sockets"
   VERBATIM
