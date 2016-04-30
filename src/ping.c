@@ -171,21 +171,47 @@ void catcher(int signum)
 
 void pinger()
 {
-    struct icmp *icmp = (struct icmp *) send_buf;
-    bzero(icmp, sizeof(struct icmp));
+    int iplen;
+    int icmplen;
+    struct sockaddr_in self_ip_addr;
+    struct ip ip;
+    struct icmp *icmp;
 
+    ip.ip_hl = 0x5; // header (datagram) length
+    ip.ip_v = 0x4;    // version
+    ip.ip_tos = 0x0;// type of service controls the priority of the packet (0x00 is normal)
+    ip.ip_id = htons(12830);
+    ip.ip_off = 0x0;  // fragment offset field
+    ip.ip_ttl = ttl;
+    ip.ip_p = IPPROTO_ICMP;
+    ip.ip_sum = 0x0;
+
+    /* ip.ip_src.s_addr = srcIP; */
+    /* ip.ip_dst.s_addr = servAddr.sin_addr.s_addr;        //inet_addr("172.16.1.204"); */
+
+    ip.ip_src.s_addr = self_ip_addr.sin_addr.s_addr;
+    ip.ip_dst.s_addr = addr_to.sin_addr.s_addr;
+
+
+    ip.ip_len = sizeof(ip) + ICMP_HEADER_LEN + icmp_data_len;
+    ip.ip_sum = calc_in_cksum((u_int16_t *) & ip, sizeof(ip));
+    /* ip->ip_len = sizeof(ip) + ICMP_HEADER_LEN + icmp_data_len; */
+    /* ip->ip_sum = calc_in_cksum((u_int16_t *) & ip, sizeof(ip)); */
+
+    icmp = (struct icmp *) (send_buf + iplen); // ICMP header start
+
+    bzero(icmp, sizeof(struct icmp));
     icmp->icmp_type = ICMP_ECHO;
     icmp->icmp_code = 0; // always zero
     icmp->icmp_id = pid;
     icmp->icmp_seq = ntransmitted++;
     if (icmp_data_len >= sizeof(struct timeval))
-        gettimeofday((struct timeval *) icmp->icmp_data, NULL);
+        gettimeofday((struct timeval *) icmp->icmp_data, OBSOLETE_TIMEZONE_ARGUMENT);
 
-    int icmplen = ICMP_HEADER_LEN + icmp_data_len;
-
+    icmplen = ICMP_HEADER_LEN + icmp_data_len;
     icmp->icmp_cksum = calc_in_cksum((u_int16_t *) icmp, icmplen);
 
-    if (sendto(sd, send_buf, icmplen, 0,
+    if (sendto(sd, send_buf, ip.ip_len, EMPTY_FLAGS,
                (struct sockaddr *) &addr_to, sizeof(addr_to)) < 0) {
         perror("sendto() failed");
         exit(ERR_ICMP_ECHO_SEND);

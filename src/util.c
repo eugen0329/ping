@@ -32,3 +32,19 @@ void sub_tval(struct timeval *out, struct timeval *in)
     out->tv_sec -= in->tv_sec;
 }
 
+
+
+void self_ip(struct sockaddr_in* addr)
+{
+    int fd;
+    struct ifreq ifr;
+    fd = socket(AF_INET, SOCK_DGRAM, 0);
+    ifr.ifr_addr.sa_family = AF_INET;
+    strncpy(ifr.ifr_name, "wlan0", IFNAMSIZ-1);
+
+    ioctl(fd, SIOCGIFADDR, &ifr);
+
+    close(fd);
+    *addr = *(struct sockaddr_in *)&ifr.ifr_addr;
+    /* strncpy(buffer, inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr), buf_size); */
+}

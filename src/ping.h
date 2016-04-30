@@ -22,7 +22,6 @@
 #  define SOC_RCV_MAX_BUF_SIZE 60 * 1024
 #endif
 
-#define DONT_SAVE_OLD_VAL NULL
 #define ICMP_HEADER_LEN 8
 
 typedef int socket_t;
@@ -46,6 +45,7 @@ static double rtt_sum = 0;
 static sockaddr_in_t addr_from, addr_to;
 
 static size_t icmp_data_len = 56;
+static uint8_t ttl = 64;
 
 char send_buf[SOC_RCV_MAX_BUF_SIZE];
 
