@@ -5,6 +5,7 @@
 #include <sys/types.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <string.h> /* for strncpy */
 
@@ -22,6 +23,6 @@
 
 u_int16_t calc_in_cksum(u_int16_t * addr, int len);
 void sub_tval(struct timeval *out, struct timeval *in);
-void self_ip(struct sockaddr_in* addr);
+in_addr_t self_ip(in_addr_t dest_ip);
 
 #endif /* end of include guard: UTIL_H_4BU2BU9L */

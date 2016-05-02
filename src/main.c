@@ -6,7 +6,6 @@
 int main(int argc, char *argv[])
 {
     char opt;
-    int i;
 
     ping_opts_t opts;
     memset(&opts, 0, sizeof(ping_opts_t));
@@ -26,10 +25,10 @@ int main(int argc, char *argv[])
     if(optind >= argc) {
         return usage();
     }
+    opts.dest_addr = &(*argv[optind]);
+    printf("opts.dest_addr %s\n", argv[optind]);
 
-    opts.dest_addr = argv[optind];
-
-    return ping(argv[1], &opts);
+    return ping(&opts);
 }
 
 int usage()

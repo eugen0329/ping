@@ -53,10 +53,13 @@ static sockaddr_in_t addr_from, addr_to;
 static size_t icmp_data_len = 56;
 static uint8_t ttl = 64;
 
+struct sockaddr_in self_ip_addr;
+in_addr_t src_addr;
+
 char send_buf[SOC_RCV_MAX_BUF_SIZE];
 
 
-int ping(const char* hostname, ping_opts_t* opts);
+int ping(ping_opts_t* opts);
 
 static void init_signal_handlers();
 static void init_interval_timer();

@@ -33,18 +33,31 @@ void sub_tval(struct timeval *out, struct timeval *in)
 }
 
 
-
-void self_ip(struct sockaddr_in* addr)
+in_addr_t self_ip(in_addr_t dest_ip)
 {
-    int fd;
-    struct ifreq ifr;
-    fd = socket(AF_INET, SOCK_DGRAM, 0);
-    ifr.ifr_addr.sa_family = AF_INET;
-    strncpy(ifr.ifr_name, "wlan0", IFNAMSIZ-1);
+    struct sockaddr_in addr;
+    socklen_t addr_len;
+    struct sockaddr_in dest_addr;
+    int fd = socket(PF_INET, SOCK_DGRAM, 0);
+    if (fd < 0) {
+        perror("Create socket error");
+        exit(-1);
+    }
 
-    ioctl(fd, SIOCGIFADDR, &ifr);
+    addr.sin_family = PF_INET;
+    addr.sin_addr.s_addr = dest_ip;
 
+    if (connect(fd, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
+        perror("util: connect");
+        exit(-1);
+    }
+
+    addr_len = sizeof(dest_addr);
+
+    if (getsockname(fd, (struct sockaddr *) &dest_addr, &addr_len) < 0) {
+        perror("util: getsockname");
+        exit(-1);
+    }
     close(fd);
-    *addr = *(struct sockaddr_in *)&ifr.ifr_addr;
-    /* strncpy(buffer, inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr), buf_size); */
+    return dest_addr.sin_addr.s_addr;
 }

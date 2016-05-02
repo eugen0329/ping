@@ -1,6 +1,35 @@
 #include "ping.h"
 
-int ping(const char* hostname, ping_opts_t* opts)
+in_addr_t getSourceIP(in_addr_t destIP)
+{
+    int udpDescr = socket(PF_INET, SOCK_DGRAM, 0);
+    if (udpDescr < 0) {
+        perror("Create socket error");
+        exit(-1);
+    }
+
+    struct sockaddr_in addr;
+    addr.sin_family = PF_INET;
+    addr.sin_addr.s_addr = destIP;
+
+    if (connect(udpDescr, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
+        perror("connect()");
+        exit(-1);
+    }
+
+    struct sockaddr_in destAddr;
+    socklen_t addrLen = sizeof(destAddr);
+
+    if (getsockname(udpDescr, (struct sockaddr *) &destAddr, &addrLen) < 0) {
+
+        perror("getsockname()");
+        exit(-1);
+    }
+    close(udpDescr);
+    return destAddr.sin_addr.s_addr;
+}
+
+int ping(ping_opts_t* opts)
 {
     size_t size = SOC_RCV_MAX_BUF_SIZE;
     sigset_t sig_mask;
@@ -9,6 +38,7 @@ int ping(const char* hostname, ping_opts_t* opts)
     char recv_buf[SOC_RCV_MAX_BUF_SIZE];
     int bytes_received;
     timeval_t timeout;
+
 
     // AF_INET: address family for IPv4
     if ((sd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP)) < 0) {
@@ -23,7 +53,7 @@ int ping(const char* hostname, ping_opts_t* opts)
     setsockopt(sd, SOL_SOCKET, SO_RCVBUF, &size, sizeof(size));
 
     // Receive address
-    hosts_db_entry = gethostbyname(hostname);
+    hosts_db_entry = gethostbyname(opts->dest_addr);
     if (hosts_db_entry == NULL) {
         perror("ping: gethostbyname");
         exit(ERR_HOST_NOT_FOUND);
@@ -34,6 +64,16 @@ int ping(const char* hostname, ping_opts_t* opts)
     addr_to.sin_addr = *((struct in_addr *) hosts_db_entry->h_addr);
 
 
+    if(opts->ttl != 0) {
+        ttl = opts->ttl;
+    }
+    if(opts->source_addr != NULL) {
+        self_ip_addr.sin_addr.s_addr = inet_addr(opts->source_addr);
+    } else {
+        src_addr = self_ip(addr_to.sin_addr.s_addr);
+    }
+
+
     // ICMP doesn't have PORT field, so we forced to identify packages by pid
     addr_from_len = sizeof(addr_from);
     pid = getpid();
@@ -41,7 +81,7 @@ int ping(const char* hostname, ping_opts_t* opts)
     init_signal_handlers();
     init_interval_timer();
 
-    printf("PING  %s (%s): %d data bytes\n", hostname,
+    printf("PING  %s (%s): %d data bytes\n", opts->dest_addr,
             inet_ntoa(addr_to.sin_addr), (int) icmp_data_len);
 
     repeat_packets_receiving = true;
@@ -169,11 +209,11 @@ void catcher(int signum)
     }
 }
 
+
 void pinger()
 {
     int iplen;
     int icmplen;
-    struct sockaddr_in self_ip_addr;
     struct ip ip;
     struct icmp *icmp;
 
@@ -186,7 +226,8 @@ void pinger()
     ip.ip_p = IPPROTO_ICMP;
     ip.ip_sum = 0x0;
 
-    ip.ip_src.s_addr = self_ip_addr.sin_addr.s_addr;
+    /* ip.ip_src.s_addr = self_ip_addr.sin_addr.s_addr; */
+    ip.ip_src.s_addr = src_addr;
     ip.ip_dst.s_addr = addr_to.sin_addr.s_addr;
 
 
