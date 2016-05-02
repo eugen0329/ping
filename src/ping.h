@@ -31,6 +31,12 @@ typedef struct hostent hostent_t;
 typedef struct itimerval itimerval_t;
 typedef struct timeval timeval_t;
 
+typedef struct {
+    int ttl;
+    char* dest_addr;
+    char* source_addr;
+} ping_opts_t;
+
 static pid_t pid;
 static socket_t sd;
 
@@ -50,7 +56,7 @@ static uint8_t ttl = 64;
 char send_buf[SOC_RCV_MAX_BUF_SIZE];
 
 
-int ping(const char* hostname);
+int ping(const char* hostname, ping_opts_t* opts);
 
 static void init_signal_handlers();
 static void init_interval_timer();

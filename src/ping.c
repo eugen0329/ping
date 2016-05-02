@@ -1,6 +1,6 @@
 #include "ping.h"
 
-int ping(const char* hostname)
+int ping(const char* hostname, ping_opts_t* opts)
 {
     size_t size = SOC_RCV_MAX_BUF_SIZE;
     sigset_t sig_mask;
@@ -186,17 +186,12 @@ void pinger()
     ip.ip_p = IPPROTO_ICMP;
     ip.ip_sum = 0x0;
 
-    /* ip.ip_src.s_addr = srcIP; */
-    /* ip.ip_dst.s_addr = servAddr.sin_addr.s_addr;        //inet_addr("172.16.1.204"); */
-
     ip.ip_src.s_addr = self_ip_addr.sin_addr.s_addr;
     ip.ip_dst.s_addr = addr_to.sin_addr.s_addr;
 
 
     ip.ip_len = sizeof(ip) + ICMP_HEADER_LEN + icmp_data_len;
     ip.ip_sum = calc_in_cksum((u_int16_t *) & ip, sizeof(ip));
-    /* ip->ip_len = sizeof(ip) + ICMP_HEADER_LEN + icmp_data_len; */
-    /* ip->ip_sum = calc_in_cksum((u_int16_t *) & ip, sizeof(ip)); */
 
     icmp = (struct icmp *) (send_buf + iplen); // ICMP header start
 
